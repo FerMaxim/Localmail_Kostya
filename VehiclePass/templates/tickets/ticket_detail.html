@@ -1,0 +1,323 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-6 animate-fade-in">
+    <!-- Back button & Header Status -->
+    <div class="flex items-center justify-between">
+        <a href="{% url 'tickets:dashboard' %}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-white transition">
+            &larr; Вернуться к дашборду
+        </a>
+        <div class="flex items-center gap-2">
+            <span class="text-xs font-mono text-slate-500">Заявка #{{ ticket.id }} от {{ ticket.created_at|date:"d.m.Y H:i" }}</span>
+        </div>
+    </div>
+
+    <!-- 50/50 SPLIT VIEW -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- LEFT COLUMN: TICKET INFO & DECISION BUTTONS (6 cols) -->
+        <div class="lg:col-span-6 space-y-6">
+            <div class="glass-panel p-6 sm:p-8 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden">
+                
+                <!-- Status Header Banner -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-white/10 mb-6">
+                    <div>
+                        <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                            <span>Транспортное Средство</span>
+                        </h1>
+                        <span class="text-sm font-semibold text-slate-400 block mt-1">
+                            Контрагент: <strong class="text-white">{{ ticket.org_name_override|default:ticket.contractor.organization_name|default:ticket.contractor.username }}</strong>
+                        </span>
+                    </div>
+                    <div>
+                        {% if ticket.status == 'new' %}
+                            <span class="px-4 py-2 rounded-full text-sm font-extrabold bg-blue-500/20 text-blue-400 border border-blue-500/40 inline-flex items-center gap-2 shadow-glow-blue">
+                                <span class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping"></span>
+                                <span>Новая (ГЛОНАСС)</span>
+                            </span>
+                        {% elif ticket.status == 'bio_check' %}
+                            <span class="px-4 py-2 rounded-full text-sm font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-2 shadow-glow-amber">
+                                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                <span>На проверке Био</span>
+                            </span>
+                        {% elif ticket.status == 'waiting_contractor' %}
+                            <span class="px-4 py-2 rounded-full text-sm font-extrabold bg-orange-500/20 text-orange-300 border border-orange-500/40 inline-flex items-center gap-2">
+                                <span class="text-lg leading-none">⏳</span>
+                                <span>Ждем ответа контрагента</span>
+                            </span>
+                        {% elif ticket.status == 'approved' %}
+                            <span class="px-4 py-2 rounded-full text-sm font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-flex items-center gap-2">
+                                <span>✅</span> <span>СОГЛАСОВАНО</span>
+                            </span>
+                        {% elif ticket.status == 'rejected' %}
+                            <div class="flex flex-col items-end">
+                                <span class="px-4 py-2 rounded-full text-sm font-extrabold bg-red-500/20 text-red-400 border border-red-500/40 inline-flex items-center gap-2 shadow-glow-red">
+                                    <span>⛔️</span> <span>ВЪЕЗД ЗАПРЕЩЕН</span>
+                                </span>
+                                {% if ticket.ban_until %}
+                                <span class="text-xs font-mono font-extrabold text-red-300 mt-2 bg-red-950/90 px-3 py-1 rounded-lg border border-red-700 shadow">
+                                    ⛔️ Карантин до {{ ticket.ban_until|date:"d.m.Y" }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="px-4 py-2 rounded-full text-sm font-bold bg-slate-700 text-slate-300">{{ ticket.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Core Fields Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                    <div class="p-4 rounded-2xl bg-slate-900/50 border border-white/5">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">🚛 Гос. номер ТС</span>
+                        <div class="text-xl font-mono font-black text-amber-300 tracking-widest uppercase">
+                            {{ ticket.vehicle_number|default:"НЕ УКАЗАН" }}
+                        </div>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-slate-900/50 border border-white/5">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">📦 Описание груза</span>
+                        <div class="text-lg font-bold text-white">
+                            {{ ticket.cargo }}
+                        </div>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-slate-900/50 border border-white/5">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">📍 Место загрузки</span>
+                        <div class="text-sm font-semibold text-blue-300">
+                            {{ ticket.loading_place }}
+                        </div>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-slate-900/50 border border-white/5">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">🏁 Место выгрузки</span>
+                        <div class="text-sm font-semibold text-emerald-300">
+                            {{ ticket.unloading_place }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comments & Credentials Terminal Box -->
+                {% if ticket.comment %}
+                <div class="mb-6 space-y-2">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                        <span>🔑 Комментарий / Логины для трекинга за 72ч</span>
+                    </span>
+                    <div class="p-4 rounded-2xl bg-slate-950 border border-blue-500/20 text-blue-200 font-mono text-xs leading-relaxed overflow-x-auto shadow-inner">
+                        {{ ticket.comment|linebreaksbr }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Document Scans / Attachments -->
+                <div class="mb-8 space-y-3">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                        📎 Вложения и акты дезинфекции ({{ ticket.attachments.count }})
+                    </span>
+                    <div class="grid grid-cols-1 gap-2">
+                        {% for att in ticket.attachments.all %}
+                            <a href="{{ att.file.url }}" target="_blank" class="p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-blue-500/30 transition flex items-center justify-between group">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xl">📄</span>
+                                    <div>
+                                        <span class="text-sm font-bold text-slate-200 group-hover:text-blue-400 transition block">{{ att.file.name|slice:"19:" }}</span>
+                                        <span class="text-[11px] text-slate-500 font-mono">Загружено: {{ att.uploaded_by.username|default:"Система" }} &bull; {{ att.uploaded_at|date:"d.m.Y H:i" }}</span>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-bold text-blue-400 px-2.5 py-1 bg-blue-500/10 rounded-lg border border-blue-500/20 group-hover:bg-blue-600 group-hover:text-white transition">
+                                    Скачать &darr;
+                                </span>
+                            </a>
+                        {% empty %}
+                            <div class="p-4 rounded-xl bg-slate-900/40 border border-dashed border-white/10 text-center text-xs text-slate-500 font-mono">
+                                ℹ️ К заявке не прикреплено ни одного документа
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- DECISION CONTROLS MODULE -->
+                {% if user.is_authenticated and user.role != 'contractor' %}
+                    <div class="pt-6 border-t border-white/10 bg-slate-900/60 -mx-6 sm:-mx-8 -mb-6 sm:-mb-8 p-6 sm:p-8 rounded-b-3xl">
+                        <h3 class="text-sm font-extrabold uppercase tracking-wider text-slate-300 mb-4 flex items-center gap-2">
+                            <span>⚖️ Панель модерации (Роль: {{ user.get_role_display }})</span>
+                        </h3>
+
+                        <form method="POST" class="space-y-4">
+                            {% csrf_token %}
+                            
+                            {% if user.role == 'glonass' and ticket.status == 'new' %}
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <button type="submit" name="action" value="approve_glonass" class="p-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition shadow-lg hover:shadow-emerald-500/30 flex items-center justify-center gap-1.5">
+                                        <span>✅ Согласовать</span>
+                                    </button>
+                                    <button type="submit" name="action" value="send_bio" class="p-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs uppercase tracking-wider transition shadow-glow-amber flex items-center justify-center gap-1.5">
+                                        <span>🛡 В Биобез</span>
+                                    </button>
+                                    <button type="submit" name="action" value="invalid_form" class="p-3.5 rounded-xl bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 transition font-bold text-xs uppercase flex items-center justify-center">
+                                        <span>❌ Ошибка формы</span>
+                                    </button>
+                                </div>
+                            {% elif user.role == 'bio_security' and ticket.status in 'bio_check,waiting_contractor' %}
+                                <div class="space-y-4">
+                                    <div class="flex flex-col sm:flex-row gap-3">
+                                        <button type="submit" name="action" value="approve_bio" class="w-full sm:w-1/2 p-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm uppercase tracking-wider transition shadow-lg hover:shadow-emerald-500/40 flex items-center justify-center gap-2">
+                                            <span>✅ Согласовать допуск ТС</span>
+                                        </button>
+                                        
+                                        <!-- Quarantine DatePicker Box -->
+                                        <div class="w-full sm:w-1/2 p-3 rounded-2xl bg-red-950/60 border border-red-500/30 space-y-2.5">
+                                            <div class="flex items-center justify-between">
+                                                <label class="text-xs font-extrabold text-red-300 uppercase tracking-wider flex items-center gap-1">
+                                                    <span>⛔️ Запрет (Карантин до):</span>
+                                                </label>
+                                                <input type="date" name="ban_until" class="px-2.5 py-1 rounded-lg glass-input text-xs border-red-500/40 font-mono text-red-200">
+                                            </div>
+                                            <button type="submit" name="action" value="reject_bio" class="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase tracking-wider transition shadow-glow-red flex items-center justify-center gap-1">
+                                                <span>🔒 Выдать запрет въезда</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="p-4 rounded-xl bg-slate-950/50 border border-white/5 text-slate-400 text-xs text-center font-mono">
+                                    ℹ️ На текущем этапе (Статус: {{ ticket.get_status_display }}) действия для вашей роли недоступны или завершены.
+                                </div>
+                            {% endif %}
+                        </form>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: HISTORY & ISOLATED INTERNAL CHAT (6 cols) -->
+        <div class="lg:col-span-6 space-y-6">
+            
+            <!-- ISOLATED INTERNAL CHAT BOX (BIO-SECURITY <-> CONTRACTOR) -->
+            <div class="glass-panel rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col h-[520px]">
+                <!-- Chat Header -->
+                <div class="p-6 bg-slate-900/80 border-b border-white/10 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-slate-950 font-bold shadow-glow-amber text-lg">
+                            💬
+                        </div>
+                        <div>
+                            <h3 class="font-black text-white tracking-wide text-base">Внутренний изолированный чат</h3>
+                            <span class="text-[11px] font-mono text-slate-400 block">Линия: Биособезопасность &harr; Контрагент</span>
+                        </div>
+                    </div>
+                    {% if ticket.status in 'bio_check,waiting_contractor' %}
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" title="Чат активен"></span>
+                    {% endif %}
+                </div>
+
+                <!-- Chat Messages Feed (Scrollable) -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-950/40">
+                    {% for msg in ticket.messages.all %}
+                        <div class="flex flex-col {% if msg.sender == user %}items-end{% else %}items-start{% endif %} animate-fade-in">
+                            <div class="flex items-center gap-2 mb-1 px-1">
+                                <span class="text-xs font-extrabold {% if msg.sender.role == 'bio_security' %}text-amber-400{% else %}text-blue-400{% endif %}">
+                                    {{ msg.sender.username }} ({{ msg.sender.get_role_display }})
+                                </span>
+                                <span class="text-[10px] text-slate-500 font-mono">{{ msg.created_at|date:"H:i, d.m" }}</span>
+                            </div>
+                            <div class="p-4 rounded-2xl max-w-[85%] text-sm shadow-md {% if msg.sender == user %}bg-blue-600 text-white rounded-br-xs{% elif msg.sender.role == 'bio_security' %}bg-amber-500/20 border border-amber-500/30 text-amber-100 rounded-bl-xs{% else %}bg-slate-800/90 text-slate-200 border border-slate-700 rounded-bl-xs{% endif %}">
+                                <div class="whitespace-pre-wrap leading-relaxed">{{ msg.text }}</div>
+                                {% if msg.attachment %}
+                                    <a href="{{ msg.attachment.url }}" target="_blank" class="mt-3 p-2.5 rounded-xl bg-black/30 hover:bg-black/50 border border-white/10 flex items-center gap-2 text-xs font-mono text-slate-200 transition">
+                                        <span>📎</span>
+                                        <span class="underline">{{ msg.attachment.name|slice:"17:" }}</span>
+                                        <span class="ml-auto text-[10px] text-blue-300">Скачать</span>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <div class="h-full flex flex-col items-center justify-center text-center text-slate-500 p-8 space-y-2 font-mono">
+                            <span class="text-3xl opacity-40">📭</span>
+                            <p class="text-xs">В данном диалоге пока нет сообщений.</p>
+                            {% if user.role == 'bio_security' %}
+                            <p class="text-[11px] text-amber-400/70">Вы являетесь единственным инициатором: напишите вопрос или замечание, чтобы открыть цикл ответа.</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Chat Input Section / Role Guard Banner -->
+                <div class="p-5 bg-slate-900/90 border-t border-white/10">
+                    {% if can_send_chat %}
+                        <form action="{% url 'tickets:send_ticket_message' ticket.id %}" method="POST" enctype="multipart/form-data" class="space-y-3">
+                            {% csrf_token %}
+                            <textarea name="text" rows="2" required placeholder="Введите сообщение для {% if user.role == 'bio_security' %}контрагента (затребовать акты...){% else %}инспектора Био...{% endif %}"
+                                      class="w-full px-4 py-2.5 rounded-xl glass-input text-sm resize-none focus:ring-2 focus:ring-amber-500"></textarea>
+                            
+                            <div class="flex items-center justify-between">
+                                <label class="cursor-pointer px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-300 transition flex items-center gap-2">
+                                    <input type="file" name="attachment" class="hidden" id="chat-file-input">
+                                    <span>📎</span> <span id="chat-file-label">Прикрепить файл/скан</span>
+                                </label>
+                                
+                                <button type="submit" class="px-6 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider transition shadow-glow-amber flex items-center gap-1.5">
+                                    <span>📨 Отправить</span>
+                                </button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="p-4 rounded-xl bg-slate-950/80 border {% if user.role == 'glonass' %}border-blue-500/30 text-blue-300{% else %}border-amber-500/30 text-amber-300{% endif %} text-xs font-medium flex items-center gap-3">
+                            <span class="text-xl">🔒</span>
+                            <div>
+                                <strong class="block text-white font-bold mb-0.5">Доступ к чату заблокирован</strong>
+                                <span class="text-[11px] opacity-80 leading-relaxed">{{ chat_disable_reason }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- AUDIT HISTORY TIMELINE LOG -->
+            <div class="glass-panel p-6 sm:p-7 rounded-3xl border border-white/10 shadow-2xl">
+                <h3 class="text-base font-black text-white tracking-wide mb-6 flex items-center gap-2">
+                    <span>📜 Лог истории и аудит действий</span>
+                    <span class="text-[11px] font-mono font-normal text-slate-500 ml-auto">Юридически значимые события</span>
+                </h3>
+                
+                <div class="relative pl-6 border-l-2 border-slate-800 space-y-6">
+                    {% for log in ticket.history.all %}
+                        <div class="relative group">
+                            <!-- Timeline node circle -->
+                            <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-slate-800 border-2 border-blue-500 group-hover:bg-blue-500 transition-colors shadow-glow-blue"></div>
+                            
+                            <div class="flex items-center justify-between text-xs font-mono text-slate-400 mb-1">
+                                <strong class="text-slate-200">{{ log.user.username|default:"Система" }}</strong>
+                                <span>{{ log.created_at|date:"d.m.Y H:i:s" }}</span>
+                            </div>
+                            <div class="text-xs sm:text-sm font-medium text-slate-300 bg-slate-900/60 p-3.5 rounded-xl border border-white/5 leading-relaxed">
+                                {{ log.action_description }}
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-slate-500 text-xs italic font-mono">История действий пока пуста.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+// Simple script to update chat file attach label
+document.addEventListener('DOMContentLoaded', () => {
+    const fileInput = document.getElementById('chat-file-input');
+    const fileLabel = document.getElementById('chat-file-label');
+    if (fileInput && fileLabel) {
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                fileLabel.textContent = fileInput.files[0].name.substring(0, 25) + '...';
+                fileLabel.classList.add('text-amber-300', 'font-bold');
+            } else {
+                fileLabel.textContent = 'Прикрепить файл/скан';
+                fileLabel.classList.remove('text-amber-300', 'font-bold');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

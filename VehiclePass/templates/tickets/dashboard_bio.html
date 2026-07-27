@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="space-y-8 animate-fade-in">
+
+    <!-- BIO-SECURITY COMMAND CENTER HEADER -->
+    <div class="glass-panel p-7 sm:p-9 rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden bg-gradient-to-r from-slate-900 via-amber-950/40 to-slate-900">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+            <div class="space-y-2 max-w-3xl">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-extrabold uppercase tracking-wider shadow-glow-amber">
+                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                    <span>2-я линия безопасности &mdash; Отдел Биобезопасности</span>
+                </div>
+                <h1 class="text-3xl font-black text-white tracking-tight">Ветеринарно-Санитарный и Карантинный Контроль</h1>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                    Управление рисками заражения, проверка актов дезинфекции и ветеринарных свидетельств. Ведение диалога с контрагентами и выплата карантинных запретов на въезд ТС.
+                </p>
+            </div>
+
+            <!-- Bio-Security Counters -->
+            <div class="flex flex-wrap items-center gap-4 bg-slate-950/70 p-4 rounded-2xl border border-white/10 shadow-inner w-full lg:w-auto">
+                <div class="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center">
+                    <span class="text-[11px] font-bold text-slate-400 block uppercase font-mono">🔍 Ждут проверки</span>
+                    <strong class="text-2xl font-mono font-black text-amber-300">{{ review_count }}</strong>
+                </div>
+                <div class="px-4 py-2 rounded-xl bg-blue-500/10 border border-blue-500/30 text-center">
+                    <span class="text-[11px] font-bold text-slate-400 block uppercase font-mono">💬 Ждем акты</span>
+                    <strong class="text-2xl font-mono font-black text-blue-400">{{ waiting_count }}</strong>
+                </div>
+                <div class="px-4 py-2 rounded-xl bg-red-600/10 border border-red-500/40 text-center">
+                    <span class="text-[11px] font-bold text-red-300 block uppercase font-mono">⛔️ На карантине</span>
+                    <strong class="text-2xl font-mono font-black text-red-400">{{ quarantine_count }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VETERINARY SPECIALIZED FILTER BAR -->
+    <div class="glass-panel p-6 sm:p-7 rounded-2xl border border-white/10 shadow-2xl space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-white/5 pb-4 gap-4">
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'tickets:dashboard' %}" class="px-4 py-2 rounded-xl text-xs font-bold transition {% if not tab %}bg-amber-500 text-slate-950 font-black shadow-glow-amber{% else %}bg-white/5 text-slate-300 hover:bg-white/10{% endif %}">
+                    📋 Все дела отдела Био
+                </a>
+                <a href="?tab=review" class="px-4 py-2 rounded-xl text-xs font-bold transition {% if tab == 'review' %}bg-amber-500 text-slate-950 font-black shadow-glow-amber{% else %}bg-amber-500/10 text-amber-300 hover:bg-amber-500/20{% endif %}">
+                    🛡️ Новые передачи от ГЛОНASS ({{ review_count }})
+                </a>
+                <a href="?tab=waiting" class="px-4 py-2 rounded-xl text-xs font-bold transition {% if tab == 'waiting' %}bg-blue-600 text-white shadow-glow-blue{% else %}bg-blue-500/10 text-blue-300 hover:bg-blue-500/20{% endif %}">
+                    ⏳ В процессе чата ({{ waiting_count }})
+                </a>
+                <a href="?tab=quarantine" class="px-4 py-2 rounded-xl text-xs font-bold transition {% if tab == 'quarantine' %}bg-red-600 text-white shadow-glow-red{% else %}bg-red-500/10 text-red-300 hover:bg-red-500/20{% endif %}">
+                    ⛔️ Активный карантин ({{ quarantine_count }})
+                </a>
+            </div>
+            <a href="{% url 'tickets:dashboard' %}" class="text-xs font-semibold text-slate-400 hover:text-white underline ml-auto">
+                Сбросить фильтры
+            </a>
+        </div>
+
+        <form method="GET" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <input type="hidden" name="tab" value="{{ tab }}">
+
+            <!-- Vehicle Plate Search -->
+            <div>
+                <label class="block text-xs font-semibold text-slate-400 mb-2 uppercase tracking-wider">🚛 Гос. номер ТС / Контрагент</label>
+                <input type="text" name="vehicle" placeholder="Поиск по номеру ТС..." value="{{ vehicle }}"
+                       class="w-full px-4 py-2.5 rounded-xl glass-input text-sm font-mono uppercase focus:ring-2 focus:ring-amber-500">
+            </div>
+
+            <!-- Quarantine Expiration Date Filter -->
+            <div>
+                <label class="block text-xs font-black text-red-400 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🛡️ Карантин (Запрет действует от даты)</span>
+                </label>
+                <input type="date" name="ban_until" value="{{ ban_until|default:'' }}"
+                       class="w-full px-4 py-2 rounded-xl glass-input text-sm border-red-500/40 text-red-200 focus:ring-2 focus:ring-red-500">
+            </div>
+
+            <!-- Submit Button -->
+            <div>
+                <button type="submit" class="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm uppercase tracking-wider transition-all shadow-glow-amber flex items-center justify-center gap-2">
+                    <span>⚡ Фильтровать реестр Биобеза</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- BIO-SECURITY REGISTRY TABLE -->
+    <div class="glass-panel rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-900/95 text-slate-400 font-bold uppercase tracking-wider text-xs border-b border-white/10">
+                    <tr>
+                        <th class="py-4 px-6">ID / Дата</th>
+                        <th class="py-4 px-6">Контрагент</th>
+                        <th class="py-4 px-6">Гос. номер ТС</th>
+                        <th class="py-4 px-6">Проверяемый Маршрут / Груз</th>
+                        <th class="py-4 px-6">Карантинный статус / Чат</th>
+                        <th class="py-4 px-6 text-right">Действие инспектора</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-white/5">
+                    {% for ticket in tickets %}
+                    <tr class="table-row-hover group {% if ticket.status == 'bio_check' %}bg-amber-950/20 border-l-4 border-amber-500{% elif ticket.status == 'rejected' %}bg-red-950/20 border-l-4 border-red-500{% endif %}">
+                        <td class="py-4 px-6 whitespace-nowrap">
+                            <span class="font-mono font-black text-white text-base">#{{ ticket.id }}</span>
+                            <span class="block text-[11px] text-slate-500 font-mono">{{ ticket.created_at|date:"d.m.Y H:i" }}</span>
+                        </td>
+                        <td class="py-4 px-6">
+                            <span class="font-bold text-slate-200 block text-base">{{ ticket.org_name_override|default:ticket.contractor.organization_name|default:ticket.contractor.username }}</span>
+                            <span class="text-xs text-slate-500 font-mono">👤 {{ ticket.contractor.username }}</span>
+                        </td>
+                        <td class="py-4 px-6 whitespace-nowrap">
+                            {% if ticket.vehicle_number %}
+                                <span class="px-3 py-1 rounded-lg bg-slate-800 border border-slate-700 font-mono font-black text-amber-300 text-base tracking-widest uppercase inline-block shadow-inner">
+                                    {{ ticket.vehicle_number }}
+                                </span>
+                            {% else %}
+                                <span class="text-slate-500 italic">Не указан</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-6">
+                            <div class="font-semibold text-slate-200 flex items-center gap-2 text-sm">
+                                <span class="text-blue-300">{{ ticket.loading_place }}</span> 
+                                <span class="text-slate-600">&rarr;</span> 
+                                <span class="text-emerald-300">{{ ticket.unloading_place }}</span>
+                            </div>
+                            <div class="text-xs text-slate-400 mt-1 font-mono">📦 Груз: <strong class="text-white">{{ ticket.cargo }}</strong></div>
+                        </td>
+                        <td class="py-4 px-6 whitespace-nowrap">
+                            {% if ticket.status == 'bio_check' %}
+                                <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1.5 shadow-glow-amber">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                                    <span>Требует вашего решения</span>
+                                </span>
+                                <span class="text-[11px] text-slate-400 block mt-1">Инициируйте чат или выдайте запрет/согласование</span>
+                            {% elif ticket.status == 'waiting_contractor' %}
+                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 inline-flex items-center gap-1">
+                                    <span>⏳ Ожидается ответ в чате</span>
+                                </span>
+                                <span class="text-[11px] text-slate-400 block mt-1">Запрошены дополнительные акты</span>
+                            {% elif ticket.status == 'approved' %}
+                                <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 inline-flex items-center gap-1">
+                                    <span>✅ Допуск согласован</span>
+                                </span>
+                            {% elif ticket.status == 'rejected' %}
+                                <span class="px-3 py-1 rounded-full text-xs font-black bg-red-500/20 text-red-400 border border-red-500/40 inline-flex items-center gap-1 shadow-glow-red">
+                                    <span>⛔️ ВЪЕЗД ЗАПРЕЩЕН</span>
+                                </span>
+                                {% if ticket.ban_until %}
+                                    <div class="text-xs font-mono font-extrabold text-red-200 mt-1.5 bg-red-950 p-1.5 rounded border border-red-700 w-fit">
+                                        🛡️ КАРАНТИН ДО: {{ ticket.ban_until|date:"d.m.Y" }}
+                                    </div>
+                                {% endif %}
+                            {% else %}
+                                <span class="px-3 py-1 rounded-full text-xs bg-slate-800 text-slate-300">{{ ticket.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-4 px-6 text-right whitespace-nowrap">
+                            <a href="{% url 'tickets:ticket_detail' ticket.id %}" class="px-5 py-2.5 rounded-xl {% if ticket.status == 'bio_check' %}bg-amber-500 text-slate-950 hover:bg-amber-400 font-black shadow-glow-amber{% else %}bg-white/5 hover:bg-white/10 text-slate-300 font-bold{% endif %} transition text-xs inline-flex items-center gap-1.5">
+                                <span>{% if ticket.status == 'bio_check' %}⚖️ Экспертиза / Чат{% else %}Открыть дело{% endif %}</span> 
+                                <span class="group-hover:translate-x-0.5 transition-transform">&rarr;</span>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="py-16 text-center text-slate-500 font-medium">
+                            <div class="flex flex-col items-center gap-3">
+                                <span class="text-5xl">🛡️</span>
+                                <p class="text-lg text-slate-400 font-semibold">В реестре Биобезопасности по данному фильтру нет записей</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

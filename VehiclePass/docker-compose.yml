@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: biopass_app
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./db.sqlite3:/app/db.sqlite3 # Сохранение базы данных
+      - ./media:/app/media           # Сохранение вложений и сканов
+    environment:
+      - DEBUG=True # Для staging/тестирования, в продакшене установить False
+      - ALLOWED_HOSTS=*
+    # Запускаем через встроенный сервер или gunicorn (по умолчанию Gunicorn из Dockerfile)
+    # Если нужен режим разработчика в докере:
+    # command: python manage.py runserver 0.0.0.0:8000
+    restart: unless-stopped
