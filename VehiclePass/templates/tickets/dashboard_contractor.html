@@ -16,7 +16,7 @@
                     {{ user.organization_name|default:user.username }}
                 </h1>
                 <p class="text-slate-300 text-sm leading-relaxed">
-                    Управляйте пропусками для вашего транспорта. После подачи заявки она проходит 1-ю линию проверки маршрута ГЛОНASS, а при необходимости &mdash; ветеринарный контроль отдела Биобезопасности.
+                    Управляйте пропусками для вашего транспорта. После подачи заявки она проходит 1-ю линию проверки маршрута ГЛОНASS, а при необходимости &mdash; ветеринарный контроль отдела ОАБ.
                 </p>
             </div>
 
@@ -40,7 +40,7 @@
             <div class="text-3xl sm:text-4xl font-black {% if action_required_count > 0 %}text-amber-400 animate-pulse{% else %}text-white{% endif %} mt-2 font-mono">
                 {{ action_required_count }}
             </div>
-            <span class="text-[11px] text-slate-500 mt-1 block font-mono">Запросы от инспектора Биобеза</span>
+            <span class="text-[11px] text-slate-500 mt-1 block font-mono">Запросы от инспектора ОАБ</span>
         </a>
 
         <!-- Tile 2: In Progress -->
@@ -171,7 +171,7 @@
                             {% elif ticket.status == 'bio_check' %}
                                 <span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1.5 shadow-glow-amber">
                                     <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                                    <span>На проверке отдела Биобезопасности</span>
+                                    <span>На проверке ОАБ</span>
                                 </span>
                                 <span class="text-[11px] text-slate-400 block mt-1">Ожидайте результатов или вопроса в чат</span>
                             {% elif ticket.status == 'waiting_contractor' %}

@@ -19,40 +19,29 @@ def can_view_ticket(user, ticket):
 def can_access_chat(user, ticket):
     """
     Returns a tuple: (can_view_chat: bool, can_send_messages: bool, disable_reason: str)
-    Enforces strict role isolation rules for internal chat.
     """
     if not user or not user.is_authenticated:
         return False, False, "Требуется авторизация."
     if user.is_superuser:
         return True, True, ""
         
-    # 1. GLONASS has NO chat interface whatsoever
+    # 1. GLONASS can chat while ticket is in their jurisdiction
     if user.role == 'glonass':
-        return False, False, "Отделу ГЛОНАСС переписка недоступна. Все диалоги с контрагентами ведутся специалистами Биобезопасности."
-        
-    # 2. Chat only activates when ticket reaches Bio stage
-    if ticket.status in ['new', 'invalid_form']:
-        return False, False, "Чат становится доступен только после перевода заявки в отдел Биобезопасности."
-        
-    # 3. Bio-Security role (Moderator 2nd line)
-    if user.role == 'bio_security':
-        if ticket.status in ['bio_check', 'waiting_contractor']:
+        if ticket.status in ['new', 'invalid_form']:
             return True, True, ""
-        elif ticket.status in ['approved', 'rejected']:
-            return True, False, "Заявка закрыта. Переписка завершена."
+        return True, False, "Чат для отдела ГЛОНАСС доступен только на этапе первичной проверки."
+        
+    # 2. Bio-Security role (ОАБ)
+    if user.role == 'bio_security':
+        if ticket.status in ['bio_check', 'waiting_contractor', 'approved', 'rejected']:
+            return True, True, ""
         return False, False, "Недоступно в текущем статусе."
         
-    # 4. Contractor role
+    # 3. Contractor role
     if user.role == 'contractor':
         if ticket.contractor != user:
             return False, False, "У вас нет доступа к чужой заявке."
-        if ticket.status == 'bio_check':
-            # Contractor CANNOT initiate or speak while Bio is reviewing
-            return True, False, "Ожидайте результатов проверки или сообщения от отдела Биобезопасности. Вы сможете написать, когда инспекторы зададут вопрос в чат."
-        elif ticket.status == 'waiting_contractor':
-            # Unlocked! Bio asked a question, contractor can reply in loop
-            return True, True, ""
-        elif ticket.status in ['approved', 'rejected']:
-            return True, False, "Заявка закрыта. Переписка завершена."
+        # Контрагент может писать в чат на любом этапе своей заявки
+        return True, True, ""
             
     return False, False, "Доступ ограничен."

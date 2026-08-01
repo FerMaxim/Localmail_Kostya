@@ -16,7 +16,7 @@ class User(AbstractUser):
 class Ticket(models.Model):
     STATUS_CHOICES = (
         ('new', 'Новая'),
-        ('bio_check', 'На проверке Биобезопасности'),
+        ('bio_check', 'На проверке ОАБ'),
         ('waiting_contractor', 'Ожидает ответа от контрагента'),
         ('approved', 'Согласовано'),
         ('rejected', 'Въезд запрещен'),

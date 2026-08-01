@@ -10,7 +10,7 @@ def create_ticket(contractor, loading_place, unloading_place, cargo, vehicle_num
         loading_place=loading_place.strip(),
         unloading_place=unloading_place.strip(),
         cargo=cargo.strip(),
-        vehicle_number=(vehicle_number or "").strip() or None,
+        vehicle_number=(vehicle_number or "").replace(' ', '').upper() or None,
         org_name_override=(org_name_override or "").strip() or None,
         comment=(comment or "").strip() or None,
         status='new'
@@ -148,5 +148,36 @@ def ban_vehicle_by_bio(ticket, user, ban_until_date):
         ticket=ticket,
         user=user,
         action_description=f"Биобезопасность: ВЪЕЗД ЗАПРЕЩЕН. Установлен строгий карантин до {ban_until_date}."
+    )
+    return ticket
+
+@transaction.atomic
+def revert_to_new(ticket, user):
+    if not (user.role == 'glonass' or user.is_superuser):
+        raise PermissionDenied("Только сотрудники ГЛОНАСС могут возвращать заявки.")
+    ticket.status = 'new'
+    ticket.ban_until = None
+    ticket.save()
+    TicketHistory.objects.create(
+        ticket=ticket,
+        user=user,
+        action_description="ГЛОНАСС: Отмена решения. Заявка возвращена в работу (Новая)."
+    )
+    return ticket
+
+@transaction.atomic
+def revert_to_bio_check(ticket, user):
+    if not (user.role == 'bio_security' or user.is_superuser):
+        raise PermissionDenied("Только сотрудники ОАБ могут возвращать заявки.")
+    if ticket.status not in ['approved', 'rejected']:
+        raise ValidationError("Возврат возможен только для закрытых заявок.")
+        
+    ticket.status = 'bio_check'
+    ticket.ban_until = None
+    ticket.save()
+    TicketHistory.objects.create(
+        ticket=ticket,
+        user=user,
+        action_description="ОАБ: Отмена решения. Заявка возвращена на этап проверки."
     )
     return ticket

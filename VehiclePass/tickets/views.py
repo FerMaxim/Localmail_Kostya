@@ -210,6 +210,12 @@ def ticket_detail(request, pk):
                 ban_date = request.POST.get('ban_until')
                 services.ban_vehicle_by_bio(ticket, request.user, ban_date)
                 messages.error(request, f"Въезд запрещен! ТС отправлено на карантин до {ban_date}.")
+            elif action == 'revert_glonass':
+                services.revert_to_new(ticket, request.user)
+                messages.warning(request, "Заявка возвращена в статус Новая.")
+            elif action == 'revert_bio':
+                services.revert_to_bio_check(ticket, request.user)
+                messages.warning(request, "Заявка возвращена на проверку ОАБ.")
             else:
                 messages.error(request, "Неизвестное действие.")
         except (PermissionDenied, ValidationError) as e:
