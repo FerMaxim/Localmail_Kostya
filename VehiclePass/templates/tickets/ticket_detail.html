@@ -7,7 +7,12 @@
         <a href="{% url 'tickets:dashboard' %}" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-white transition">
             &larr; Вернуться к дашборду
         </a>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
+            {% if user.is_authenticated and user.role != 'contractor' %}
+                <button type="button" onclick="copyToExcel()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 transition text-xs font-bold uppercase tracking-wider">
+                    <span>📋 В Excel</span>
+                </button>
+            {% endif %}
             <span class="text-xs font-mono text-slate-500">Заявка #{{ ticket.id }} от {{ ticket.created_at|date:"d.m.Y H:i" }}</span>
         </div>
     </div>
@@ -155,7 +160,7 @@
                                         <span>❌ Ошибка формы</span>
                                     </button>
                                 </div>
-                            {% elif user.role == 'glonass' and ticket.status in 'invalid_form,bio_check' %}
+                            {% elif user.role == 'glonass' and ticket.status in 'invalid_form,bio_check,approved' %}
                                 <div class="grid grid-cols-1 gap-3">
                                     <button type="submit" name="action" value="revert_glonass" class="p-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-sm uppercase tracking-wider transition shadow-lg flex items-center justify-center gap-2 border border-slate-600">
                                         <span>⏪ Вернуть в статус "Новая"</span>
@@ -314,6 +319,27 @@
     </div>
 </div>
 
+<!-- HIDDEN TABLE FOR EXCEL EXPORT -->
+<div id="excel-table-container" style="position: absolute; left: -9999px; top: -9999px; opacity: 0;">
+    <table id="excelTable" style="font-family: Calibri, sans-serif; font-size: 11pt; border-collapse: collapse;">
+        <tr>
+            <td style="border: 1px solid black;">{% now "d.m.Y" %}</td>
+            <td style="border: 1px solid black;">{{ ticket.created_at|date:"H:i" }}</td>
+            <td style="border: 1px solid black;">{{ ticket.vehicle_number|default:"" }}</td>
+            <td style="border: 1px solid black;">{{ ticket.loading_place }}</td>
+            <td style="border: 1px solid black;">{{ ticket.unloading_place }}</td>
+            <td style="border: 1px solid black;">{{ ticket.cargo }}</td>
+            <td style="border: 1px solid black;"></td>
+            <td style="border: 1px solid black;"></td>
+            <td style="border: 1px solid black;"></td>
+            <td style="border: 1px solid black;"></td>
+            <td style="border: 1px solid black;"></td>
+            <td style="border: 1px solid black;"></td>
+            <td style="border: 1px solid black;"></td>
+        </tr>
+    </table>
+</div>
+
 <script>
 // Simple script to update chat file attach label
 document.addEventListener('DOMContentLoaded', () => {
@@ -331,5 +357,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// Copy to Excel logic
+function copyToExcel() {
+    const table = document.getElementById('excelTable');
+    if (!table) return;
+
+    const selection = window.getSelection();
+    const range = document.createRange();
+    
+    // Select the table node itself
+    range.selectNode(table);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    
+    try {
+        document.execCommand('copy');
+        alert('Строка скопирована! Вставьте в Excel.');
+    } catch (err) {
+        console.error('Ошибка копирования', err);
+        alert('Ошибка при копировании');
+    }
+    
+    selection.removeAllRanges();
+}
 </script>
 {% endblock %}
