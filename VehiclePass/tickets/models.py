@@ -47,6 +47,71 @@ class Ticket(models.Model):
     def __str__(self):
         return f"Заявка #{self.id} - {self.vehicle_number or 'Без номера'} ({self.get_status_display()})"
 
+    def get_excel_data(self):
+        from django.db.models import Q
+        # 1. Дата проверки, 2. Время проверки
+        terminal_logs = self.history.filter(
+            Q(action_description__icontains='согласован') | 
+            Q(action_description__icontains='запрещен') | 
+            Q(action_description__icontains='отклонен') |
+            Q(action_description__icontains='неправильное')
+        ).order_by('-created_at')
+        
+        check_date = ""
+        check_time = ""
+        operator_name = ""
+        if terminal_logs.exists():
+            last_log = terminal_logs.first()
+            check_date = last_log.created_at.strftime("%d.%m.%Y")
+            check_time = last_log.created_at.strftime("%H:%M")
+            if last_log.user:
+                operator_name = f"{last_log.user.last_name} {last_log.user.first_name}".strip() or last_log.user.username
+
+        # 10. Необходимость согласования ОАБ
+        oab_required = self.history.filter(
+            Q(action_description__contains='Биобез') | Q(action_description__contains='ОАБ')
+        ).exists()
+
+        oab_required_str = "Да" if oab_required else ""
+        
+        # 11. Решение ОАБ
+        oab_decision = ""
+        if oab_required:
+            if self.status == 'approved':
+                oab_decision = "согласовано"
+            elif self.status == 'rejected':
+                oab_decision = "не согласовано"
+                
+        # 8. Результат проверки
+        check_result = ""
+        if self.status == 'approved' and not oab_required:
+            check_result = "Известных зон АЧС не пересекал"
+            
+        # 13. Комментарии
+        comments = "Решение о допуске по согласованию с отделом аудита биобезопасности." if oab_required else ""
+
+        contractor_name = self.contractor.organization_name or self.contractor.username
+        
+        data = [
+            check_date,
+            check_time,
+            self.vehicle_number or "",
+            contractor_name,
+            self.loading_place or "",
+            self.unloading_place or "",
+            self.cargo or "",
+            check_result,
+            "", # Признак АЧС
+            oab_required_str,
+            oab_decision,
+            "", # Способ проверки
+            comments,
+            operator_name # ФИО оператора
+        ]
+        
+        clean_data = [str(x).replace('\t', ' ').replace('\n', ' ').replace('\r', '') for x in data]
+        return '\t'.join(clean_data)
+
 class Attachment(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='attachments', verbose_name="Заявка")
     file = models.FileField(upload_to='ticket_attachments/', verbose_name="Файл")

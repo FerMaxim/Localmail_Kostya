@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col justify-center items-center text-center mt-12 mb-20 animate-fade-in relative">
+    <!-- Decorative Orbs -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-semibold mb-8 relative z-10">
+        <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+        Версия 2.0: Обновленная логистика
+    </div>
+
+    <h1 class="text-5xl md:text-7xl font-black mb-6 tracking-tight relative z-10 text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-500">
+        Умный контроль<br>транспортных потоков
+    </h1>
+    
+    <p class="text-lg md:text-xl text-slate-400 max-w-2xl mb-12 font-medium relative z-10">
+        BioPass Control — это закрытая экосистема для автоматизированного контроля проезда на территорию предприятия.
+        Двухэтапная проверка: ГЛОНАСС-маршрутизация и строгий аудит биобезопасности.
+    </p>
+
+    <div class="flex flex-col sm:flex-row gap-4 relative z-10">
+        <a href="{% url 'login' %}" class="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-lg shadow-glow-blue transition-all hover:-translate-y-1">
+            Авторизация
+        </a>
+        <a href="{% url 'tickets:register' %}" class="px-8 py-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-lg shadow-glass transition-all hover:-translate-y-1">
+            Стать контрагентом
+        </a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto relative z-10">
+    <div class="glass-panel p-6 rounded-2xl border-t-4 border-blue-500/50">
+        <div class="text-3xl mb-4">🛰️</div>
+        <h3 class="text-xl font-bold mb-2">ГЛОНАСС интеграция</h3>
+        <p class="text-slate-400 text-sm">Проверка треков и маршрутов прибытия за последние 72 часа для исключения заезда в опасные зоны.</p>
+    </div>
+    
+    <div class="glass-panel p-6 rounded-2xl border-t-4 border-amber-500/50">
+        <div class="text-3xl mb-4">🛡️</div>
+        <h3 class="text-xl font-bold mb-2">Биоконтроль</h3>
+        <p class="text-slate-400 text-sm">Строгий аудит от службы ОАБ для выявления рисков АЧС и карантинирования небезопасного транспорта.</p>
+    </div>
+    
+    <div class="glass-panel p-6 rounded-2xl border-t-4 border-emerald-500/50">
+        <div class="text-3xl mb-4">⚡</div>
+        <h3 class="text-xl font-bold mb-2">Мгновенный ответ</h3>
+        <p class="text-slate-400 text-sm">Единый коммуникационный шлюз между контрагентом и диспетчерами. Никаких бумажных волокит.</p>
+    </div>
+</div>
+{% endblock %}

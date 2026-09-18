@@ -1,5 +1,5 @@
-from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db.models import Q
@@ -7,10 +7,13 @@ from .models import Ticket, User
 from .permissions import can_view_ticket, can_access_chat
 from . import services
 
-def dashboard(request):
-    if not request.user.is_authenticated:
-        return redirect('admin:login')
+def landing_page(request):
+    if request.user.is_authenticated:
+        return redirect('tickets:dashboard')
+    return render(request, 'tickets/landing.html')
 
+@login_required
+def dashboard(request):
     user = request.user
     base_qs = Ticket.objects.select_related('contractor').all().order_by('-created_at')
 
@@ -282,3 +285,147 @@ def ticket_create(request):
             messages.error(request, str(e))
             
     return render(request, 'tickets/ticket_form.html')
+
+
+import openpyxl
+from django.http import HttpResponse
+from datetime import datetime
+from django.utils.timezone import make_aware
+
+@login_required
+def export_report_xlsx(request):
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+
+    tickets = Ticket.objects.all().prefetch_related('history', 'contractor').order_by('created_at')
+
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+            start_date = make_aware(start_date)
+            tickets = tickets.filter(created_at__gte=start_date)
+        except ValueError:
+            pass
+
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+            end_date = make_aware(end_date)
+            tickets = tickets.filter(created_at__lte=end_date)
+        except ValueError:
+            pass
+
+    wb = openpyxl.Workbook()
+    
+    # Sheet 1 (Summary)
+    ws1 = wb.active
+    ws1.title = "Сводка"
+    
+    period_str = f"С {start_date_str or 'начала'} по {end_date_str or 'конец'}"
+    
+    total_count = tickets.count()
+    glonass_approved = 0
+    glonass_rejected = 0
+    oab_approved = 0
+    oab_rejected = 0
+
+    for t in tickets:
+        oab_required = t.history.filter(
+            Q(action_description__contains='Биобез') | Q(action_description__contains='ОАБ')
+        ).exists()
+        
+        if oab_required:
+            if t.status == 'approved':
+                oab_approved += 1
+            elif t.status == 'rejected':
+                oab_rejected += 1
+        else:
+            if t.status == 'approved':
+                glonass_approved += 1
+            elif t.status in ['rejected', 'invalid_form']:
+                glonass_rejected += 1
+
+    ws1.append(["Период отчёта", period_str])
+    ws1.append(["Всего ТС проверено", total_count])
+    ws1.append(["Всего ТС согласовано ГЛОНАСС", glonass_approved])
+    ws1.append(["Всего ТС не согласовано ГЛОНАСС", glonass_rejected])
+    ws1.append(["Всего ТС согласовано ОАБ", oab_approved])
+    ws1.append(["Всего ТС не согласовано ОАБ", oab_rejected])
+    ws1.append(["Всего ТС принадлежат ТБ", "=COUNTIF('Доставка ТМЦ'!D:D, \"*ТБ*\")"])
+    
+    # Стилизуем немного колонки
+    ws1.column_dimensions['A'].width = 45
+    ws1.column_dimensions['B'].width = 25
+
+    from openpyxl.worksheet.table import Table, TableStyleInfo
+    from openpyxl.utils import get_column_letter
+
+    # Sheet 2 (Data)
+    ws2 = wb.create_sheet(title="Доставка ТМЦ")
+    headers = [
+        "Дата проверки", "время проверки", "гос.номер ТС", "Контрагент",
+        "откуда выехал", "место прибытия (КПК, название ПП, МПП)", "Груз (наименование, тип)",
+        "результат проверки на пересечение известных зон АЧС", "Признак АЧС", "Необходимость согласования УВ/отдела по контролю биобезопасности",
+        "решение вет службы (в случае пересечения известных зон АЧС)", "способ проверки маршрута ТС", "комментарии", "ФИО оператора"
+    ]
+    ws2.append(headers)
+    
+    for t in tickets:
+        row_data = t.get_excel_data().split('\t')
+        ws2.append(row_data)
+
+    for col in range(1, 15):
+        ws2.column_dimensions[get_column_letter(col)].width = 22
+
+    if ws2.max_row > 1:
+        tab = Table(displayName="TicketsTable", ref=f"A1:{get_column_letter(14)}{ws2.max_row}")
+        style = TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+                               showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+        tab.tableStyleInfo = style
+        ws2.add_table(tab)
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename=report_{datetime.now().strftime("%Y%m%d_%H%M")}.xlsx'
+    
+    wb.save(response)
+    return response
+
+from django.contrib.auth import login
+from .forms import ContractorRegistrationForm
+
+def register_view(request):
+    if request.user.is_authenticated:
+        return redirect('tickets:dashboard')
+        
+    if request.method == 'POST':
+        form = ContractorRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.role = 'contractor'  # Все новые пользователи становятся Контрагентами
+            user.save()
+            login(request, user)
+            messages.success(request, f"Регистрация прошла успешно! Добро пожаловать, {user.first_name} {user.last_name}.")
+            return redirect('tickets:dashboard')
+    else:
+        form = ContractorRegistrationForm()
+        
+    return render(request, 'registration/register.html', {'form': form})
+
+@user_passes_test(lambda u: u.is_superuser)
+def personnel_management(request):
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        new_role = request.POST.get('role')
+        if user_id and new_role in dict(User.ROLE_CHOICES):
+            u = get_object_or_404(User, id=user_id)
+            if not u.is_superuser:  # Предотвращение изменения роли самого себя/других суперадминов
+                u.role = new_role
+                u.save()
+                messages.success(request, f"Роль пользователя {u.username} изменена на {u.get_role_display()}.")
+            else:
+                messages.error(request, "Невозможно изменить роль главного администратора.")
+            return redirect('tickets:personnel')
+            
+    users = User.objects.exclude(is_superuser=True).order_by('-date_joined')
+    return render(request, 'tickets/personnel.html', {'users': users, 'roles': User.ROLE_CHOICES})
+

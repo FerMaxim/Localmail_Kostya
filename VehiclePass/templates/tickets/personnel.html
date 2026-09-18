@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-8 flex items-center justify-between">
+    <div>
+        <h1 class="text-3xl font-black text-white mb-2">Управление персоналом</h1>
+        <p class="text-slate-400">Назначение ролей и доступов к системе диспетчеризации</p>
+    </div>
+</div>
+
+<div class="glass-panel rounded-2xl overflow-hidden shadow-2xl border border-white/10 relative z-10">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-white/5 border-b border-white/10">
+                    <th class="py-4 px-6 text-xs font-bold text-slate-300 uppercase tracking-wider">Логин</th>
+                    <th class="py-4 px-6 text-xs font-bold text-slate-300 uppercase tracking-wider">ФИО</th>
+                    <th class="py-4 px-6 text-xs font-bold text-slate-300 uppercase tracking-wider">Организация</th>
+                    <th class="py-4 px-6 text-xs font-bold text-slate-300 uppercase tracking-wider">Текущая роль</th>
+                    <th class="py-4 px-6 text-xs font-bold text-slate-300 uppercase tracking-wider">Изменить роль</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                {% for target_user in users %}
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="py-4 px-6 font-semibold text-slate-200">
+                        {{ target_user.username }}
+                    </td>
+                    <td class="py-4 px-6 text-slate-400">
+                        {{ target_user.last_name }} {{ target_user.first_name }}
+                    </td>
+                    <td class="py-4 px-6 text-slate-400">
+                        {{ target_user.organization_name|default:"—" }}
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold
+                            {% if target_user.role == 'contractor' %} bg-slate-500/20 text-slate-300 border border-slate-500/30
+                            {% elif target_user.role == 'glonass' %} bg-blue-500/20 text-blue-300 border border-blue-500/30
+                            {% elif target_user.role == 'bio_security' %} bg-amber-500/20 text-amber-300 border border-amber-500/30
+                            {% endif %}">
+                            {{ target_user.get_role_display }}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6">
+                        <form method="post" action="{% url 'tickets:personnel' %}" class="flex items-center gap-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="user_id" value="{{ target_user.id }}">
+                            <select name="role" class="bg-slate-900/60 border border-slate-700/50 text-slate-300 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block p-2 transition-all">
+                                {% for role_value, role_label in roles %}
+                                    <option value="{{ role_value }}" {% if target_user.role == role_value %}selected{% endif %}>
+                                        {{ role_label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="px-3 py-2 bg-purple-600/20 hover:bg-purple-600/40 text-purple-300 hover:text-white border border-purple-500/30 rounded-lg text-xs font-bold transition-all uppercase tracking-wider">
+                                Сохранить
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="py-8 text-center text-slate-500">
+                        Нет зарегистрированных пользователей.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

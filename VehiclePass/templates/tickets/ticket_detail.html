@@ -9,7 +9,7 @@
         </a>
         <div class="flex items-center gap-3">
             {% if user.is_authenticated and user.role != 'contractor' %}
-                <button type="button" onclick="copyToExcel()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 transition text-xs font-bold uppercase tracking-wider">
+                <button type="button" onclick="copyToExcel(this)" data-excel="{{ ticket.get_excel_data }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 transition text-xs font-bold uppercase tracking-wider">
                     <span>📋 В Excel</span>
                 </button>
             {% endif %}
@@ -319,26 +319,7 @@
     </div>
 </div>
 
-<!-- HIDDEN TABLE FOR EXCEL EXPORT -->
-<div id="excel-table-container" style="position: absolute; left: -9999px; top: -9999px; opacity: 0;">
-    <table id="excelTable" style="font-family: Calibri, sans-serif; font-size: 11pt; border-collapse: collapse;">
-        <tr>
-            <td style="border: 1px solid black;">{% now "d.m.Y" %}</td>
-            <td style="border: 1px solid black;">{{ ticket.created_at|date:"H:i" }}</td>
-            <td style="border: 1px solid black;">{{ ticket.vehicle_number|default:"" }}</td>
-            <td style="border: 1px solid black;">{{ ticket.loading_place }}</td>
-            <td style="border: 1px solid black;">{{ ticket.unloading_place }}</td>
-            <td style="border: 1px solid black;">{{ ticket.cargo }}</td>
-            <td style="border: 1px solid black;"></td>
-            <td style="border: 1px solid black;"></td>
-            <td style="border: 1px solid black;"></td>
-            <td style="border: 1px solid black;"></td>
-            <td style="border: 1px solid black;"></td>
-            <td style="border: 1px solid black;"></td>
-            <td style="border: 1px solid black;"></td>
-        </tr>
-    </table>
-</div>
+
 
 <script>
 // Simple script to update chat file attach label
@@ -359,27 +340,33 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Copy to Excel logic
-function copyToExcel() {
-    const table = document.getElementById('excelTable');
-    if (!table) return;
-
-    const selection = window.getSelection();
-    const range = document.createRange();
+function copyToExcel(btn) {
+    const data = btn.getAttribute('data-excel');
+    if (!data) return;
     
-    // Select the table node itself
-    range.selectNode(table);
-    selection.removeAllRanges();
-    selection.addRange(range);
+    // Create a temporary textarea to hold the text
+    const tempTextArea = document.createElement('textarea');
+    tempTextArea.value = data;
+    document.body.appendChild(tempTextArea);
+    
+    // Select and copy
+    tempTextArea.select();
+    tempTextArea.setSelectionRange(0, 99999); // For mobile devices
     
     try {
         document.execCommand('copy');
-        alert('Строка скопирована! Вставьте в Excel.');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span>✅ Скопировано</span>';
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+        }, 2000);
     } catch (err) {
         console.error('Ошибка копирования', err);
-        alert('Ошибка при копировании');
+        alert('Не удалось скопировать данные');
     }
     
-    selection.removeAllRanges();
+    // Cleanup
+    document.body.removeChild(tempTextArea);
 }
 </script>
 {% endblock %}
