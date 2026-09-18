@@ -4,3 +4,4 @@ whitenoise>=6.7
 asgiref
 sqlparse
 tzdata
+openpyxl>=3.1.0
